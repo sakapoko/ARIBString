@@ -1,0 +1,236 @@
+package ARIBString;
+use strict;
+use warnings;
+use utf8;
+use Encode;
+
+my %code = (
+  0 => "KANJI",
+  1 => "ALNUM",
+  2 => "HIRA",
+  3 => "KATA",
+);
+
+my $hiragana =
+  "　　　　　　　　　　　　　　　　".
+  "　　　　　　　　　　　　　　　　".
+  "　ぁあぃいぅうぇえぉおかがきぎく".
+  "ぐけげこごさざしじすずせぜそぞた".
+  "だちぢっつづてでとどなにぬねのは".
+  "ばぱひびぴふぶぷへべぺほぼぽまみ".
+  "むめもゃやゅゆょよらりるれろゎわ".
+  "ゐゑをん　　　ゝゞー。「」、・　";
+
+my $katakana =
+  "　　　　　　　　　　　　　　　　".
+  "　　　　　　　　　　　　　　　　".
+  "　ァアィイゥウェエォオカガキギク".
+  "グケゲコゴサザシジスズセゼソゾタ".
+  "ダチヂッツヅテデトドナニヌネノハ".
+  "バパヒビピフブプヘベペホボポマミ".
+  "ムメモャヤュユョヨラリルレロヮワ".
+  "ヰヱヲンヴヵヶヽヾー。「」、・　";
+
+my $jiskatakana =
+  "　　　　　　　　　　　　　　　　".
+  "　　　　　　　　　　　　　　　　".
+  "　。「」、・ヲァィゥェォャュョッ".
+  "ーアイウエオカキクケコサシスセソ".
+  "タチツテトナニヌネノハヒフヘホマ".
+  "ミムメモヤユヨラリルレロワン゛゜".
+  "　　　　　　　　　　　　　　　　".
+  "　　　　　　　　　　　　　　　　";
+
+my %charsize = (
+  undef => 1, # unknown
+  "KANJI" => 2,
+  "ALNUM" => 1,
+  "HIRA" => 1,
+  "KATA" => 1,
+  "MOSA_A" => 1,
+  "MOSA_B" => 1,
+#  1, # mosaic C
+#  1, # mosaic D
+#  1,
+#  1,
+#  1,
+#  1,
+#  2,
+#  2,
+#  2,
+);
+
+sub new {
+  my ($class, $arg) = @_;
+  my $obj = {};
+  bless $obj, ref $class || $class;
+}
+
+sub initialize {
+  my $self = shift;
+  $self->{offset} = 0;
+  $self->{escape} = 0;
+  $self->{code} = 0;
+  $self->{gl} = 0; # KANJI
+  $self->{gr} = 2; # HIRAGANA
+  $self->{ss} = 0;
+}
+
+sub utf8 {
+  my $src = shift;
+  my $dest = '';
+  my $offset = 0;
+  my $size = 0;
+  my $escape = 0;
+  # KANJI ALNUM HIRA KATA
+  my $gl = 0;
+  my $gr = 2;
+  my $ss = 0;
+
+  while (length($src) > $offset) {
+    my $s1 = unpack("C", substr($src, $offset++, 1));
+    printf "%02x %d/%d\n", $s1, $offset,  length($src);
+
+    if ($escape) {
+      $escape = ProcessEscape($s1);
+    } elsif ($s1 == 0x0f) {		# LS0 -> G0_GL KANJI
+      $gl = 0;
+    } elsif ($s1 == 0x0e) {	# LS1 -> G1_GL
+      $gl = 1;
+    } elsif ($s1 == 0x19) {	# SS2
+      $ss = 2;
+    } elsif ($s1 == 0x1d) {	# SS3 -> KANA
+      $ss = 3;
+    } elsif ($s1 == 0x1b) {	# ESC
+      $escape = 1;
+      print "ESC\n";
+    } elsif ($s1 == 0x89) {	# MSZ
+    } elsif ($s1 == 0x8a) {	# NSZ
+    } elsif ($s1 == 0x20) {	# SPC
+    } elsif ($s1 >= 0x21 && $s1 <= 0x7e) { # GL
+      my $code;
+      if ($ss) {
+        $code = $code{$ss};
+      } else {
+        $code = $code{$gl};
+      }
+      $ss = 0;
+      my $char = $s1;
+      printf "GL: %s, %s\n", $code, $charsize{$code};
+      if ($charsize{$code} == 2) {
+        my $s2 = unpack("C", substr($src, $offset++, 1));
+        $char = ($char << 8) + $s2;
+      }
+      $dest .= ProcessCharCode($char, $code);
+    } elsif ($s1 == 0xa0) {	# SPC
+      $dest .= "　";
+    } elsif ($s1 >= 0xa1 && $s1 <= 0xfe) { # GR
+      my $code = $code{$gr};
+      my $char = $s1;
+      printf "GR: %s, %s\n", $code, $charsize{$code};
+      if ($charsize{$code} == 2) {
+        my $s2 = unpack("C", substr($src, $offset++, 1));
+        $char = ($char << 8) + $2;
+      }
+      $dest .= ProcessCharCode($char & 0x7f7f, $code);
+    }
+  }
+  return Encode::encode('utf-8', $dest);
+}
+
+sub ProcessEscape {
+  my ($escape, $s) = @_;
+  my ($gl, $gr); # utf8()の変数を変えないといけない
+  if ($escape == 1) {
+    if ($s == 0x6e) {		# LS2
+      $gl = 2;
+      return 0;
+    } elsif ($s == 0x6f) {	# LS3
+      $gl = 3;
+      return 0;
+    } elsif ($s == 0x7e) {	# LS1R
+      $gr = 1;
+      return 0;
+    } elsif ($s == 0x7d) {	# LS2R
+      $gr = 2;
+      return 0;
+    } elsif ($s == 0x7c) {	# LS3R
+      $gr = 3;
+      return 0;
+    } elsif ($s == 0x24 or $s == 0x28) {	#
+      return 1;
+    } elsif ($s == 0x29) {
+      return 2;
+    } elsif ($s == 0x2a) {
+      return 3;
+    } elsif ($s == 0x2b) {
+      return 4;
+    } else {
+      return 0; # error
+    }
+  } elsif ($escape == 2) {
+     if (DesignationGSET($escape, $s)) { return 0; }
+    if ($s == 0x20) {
+      return 3;
+    } elsif ($s == 0x28) {
+      return 1;
+    } elsif ($s == 0x29) {
+      return 2;
+    } elsif ($s == 0x2a) {
+      return 3;
+    } elsif ($s == 0x2b) {
+      return 4;
+    }
+    return 0;
+  } elsif ($escape == 3) {
+    if (DesignationGSET($escape, $s)) { return 0; }
+    return 4;
+  } elsif ($escape == 4) {
+    return 0;
+  }
+  return ++$escape;
+}
+
+sub ProcessCharCode {
+  my ($s, $code) = @_;
+  if ($code eq 'KANJI') {
+    return PutKanjiChar($s);
+  } elsif ($code eq 'HIRA') {
+    return PutHiraganaChar($s);
+  } elsif ($code eq 'KATA') {
+    return PutKatakanaChar($s);
+  }
+  return '';
+}
+
+# 気象
+sub PutKanjiChar {
+  my $s = shift;
+  printf "%04x\n", $s;
+  return Encode::decode('jis0208-raw', pack("n", $s));
+}
+
+sub PutHiraganaChar {
+  my $s = shift;
+  #printf "hira %02x\n", $s;
+  return substr($hiragana, $s, 1);
+}
+
+sub PutKatakanaChar {
+  my $s = shift;
+  #printf "kata %02x\n", $s;
+  return substr($katakana, $s, 1);
+}
+
+sub PutJisKatakanaChar {
+  my $s = shift;
+  #printf "jisk %02x\n", $s;
+  return substr($jiskatakana, $s, 1);
+}
+
+sub DesignationGSET {
+  my ($index, $code) = @_;
+  
+}
+
+1;
