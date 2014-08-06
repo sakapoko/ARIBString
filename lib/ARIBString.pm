@@ -110,6 +110,7 @@ my %charsize = (
   \&PutSymbolChar => 2,
   \&PutMosaicChar => 1,
   \&PutJisKatakanaChar => 1,
+  \&PutDRCSChar => 1,
 );
 
 my %gset = (
@@ -130,6 +131,26 @@ my %gset = (
   "\x49" => \&PutJisKatakanaChar,
 );
 
+my %drcs = (
+  "\x40" => \&PutDRCSChar,	# DRCS-0
+  "\x41" => \&PutDRCSChar,	# DRCS-1
+  "\x42" => \&PutDRCSChar,	# DRCS-2
+  "\x43" => \&PutDRCSChar,	# DRCS-3
+  "\x44" => \&PutDRCSChar,	# DRCS-4
+  "\x45" => \&PutDRCSChar,	# DRCS-5
+  "\x46" => \&PutDRCSChar,	# DRCS-6
+  "\x47" => \&PutDRCSChar,	# DRCS-7
+  "\x48" => \&PutDRCSChar,	# DRCS-8
+  "\x49" => \&PutDRCSChar,	# DRCS-9
+  "\x4a" => \&PutDRCSChar,	# DRCS-10
+  "\x4b" => \&PutDRCSChar,	# DRCS-11
+  "\x4c" => \&PutDRCSChar,	# DRCS-12
+  "\x4d" => \&PutDRCSChar,	# DRCS-13
+  "\x4e" => \&PutDRCSChar,	# DRCS-14
+  "\x4f" => \&PutDRCSChar,	# DRCS-15
+  "\x70" => \&PutDRCSChar,	# DRCS-Macro
+);
+
 sub utf8 {
   my $src = shift;
   my $dest = '';
@@ -146,99 +167,132 @@ sub utf8 {
   #map { printf "%02x",$_ } unpack("C*", $src); print "\n";
 
   while (length($src) > $offset) {
-    my $s1 = substr($src, $offset, 5);
-
-    if ($s1 =~ /^\x0f/) {			# LS0
+    my $s1 = unpack("C", substr($src, $offset, 1));
+    if ($s1 == 0x0f) {				# LS0
       $gl = 0;
       ++$offset;
-    } elsif ($s1 =~ /^\x0e/) {			# LS1
+    } elsif ($s1 == 0x0e) {			# LS1
       $gl = 1;
       ++$offset;
-    } elsif ($s1 =~ /^\x19/) {			# SS2
+    } elsif ($s1 == 0x19) {			# SS2
       $ss = 2;
       ++$offset;
-    } elsif ($s1 =~ /^\x1d/) {			# SS3
+    } elsif ($s1 == 0x1d) {			# SS3
       $ss = 3;
       ++$offset;
-    } elsif ($s1 =~ /^\x1b\x6e/) {		# LS2
-      $gl = 2;
-      # LockingShiftGL(2)
-      $offset += 2;
-    } elsif ($s1 =~ /^\x1b\x6f/) {		# LS3
-      $gl = 3;
-      $offset += 2;
-    } elsif ($s1 =~ /^\x1b\x7e/) {		# LS1R
-      $gr = 1;
-      $offset += 2;
-    } elsif ($s1 =~ /^\x1b\x7d/) {		# LS2R
-      $gr = 2;
-      $offset += 2;
-    } elsif ($s1 =~ /^\x1b\x7c/) {		# LS3R
-      $gr = 3;
-      $offset += 2;
-    } elsif ($s1 =~ /^\x1b\x24\x28\x20(.)/) {	# DRCS2_G0
-      $offset += 5;
-    } elsif ($s1 =~ /^\x1b\x24\x29\x20(.)/) {	# DRCS2_G1
-      $offset += 5;
-    } elsif ($s1 =~ /^\x1b\x24\x2a\x20(.)/) {	# DRCS2_G2
-      $offset += 5;
-    } elsif ($s1 =~ /^\x1b\x24\x2b\x20(.)/) {	# DRCS2_G3
-      $offset += 5;
-    } elsif ($s1 =~ /^\x1b\x24\x29(.)/) {	# GSET2_G1
-      $ops{1} = $gset{$1};
-      $offset += 4;
-    } elsif ($s1 =~ /^\x1b\x24\x2a(.)/) {	# GSET2_G2
-      $ops{2} = $gset{$1};
-      $offset += 4;
-    } elsif ($s1 =~ /^\x1b\x24\x2b(.)/) {	# GSET2_G3
-      $ops{3} = $gset{$1};
-      $offset += 4;
-    } elsif ($s1 =~ /^\x1b\x24(.)/) {		# GSET2_G0
-      $ops{0} = $gset{$1};
-      $offset += 3;
-    } elsif ($s1 =~ /^\x1b\x28\x20(.)/) {	# DRCS1_G0
-      $offset += 4;
-    } elsif ($s1 =~ /^\x1b\x29\x20(.)/) {	# DRCS1_G1
-      $offset += 4;
-    } elsif ($s1 =~ /^\x1b\x2a\x20(.)/) {	# DRCS1_G2
-      $offset += 4;
-    } elsif ($s1 =~ /^\x1b\x2b\x20(.)/) {	# DRCS1_G3
-      $offset += 4;
-    } elsif ($s1 =~ /^\x1b\x28(.)/) {		# GSET_G0
-      $ops{0} = $gset{$1};
-      $offset += 3;
-    } elsif ($s1 =~ /^\x1b\x29(.)/) {		# GSET_G1
-      $ops{1} = $gset{$1};
-      $offset += 3;
-    } elsif ($s1 =~ /^\x1b\x2a(.)/) {		# GSET_G2
-      $ops{2} = $gset{$1};
-      $offset += 3;
-    } elsif ($s1 =~ /^\x1b\x2b(.)/) {		# GSET_G3
-      $ops{3} = $gset{$1};
-      $offset += 3;
-    } elsif ($s1 =~ /^\x1b/) {			# ESC
+    } elsif ($s1 == 0x1b) {			# ESC
+      my $s2 = substr($src, $offset + 1, 1);
+      if ($s2 eq "\x6e") {			# LS2
+        $gl = 2;
+        $offset += 2;
+      } elsif ($s2 eq "\x6f") {		# LS3
+        $gl = 3;
+        $offset += 2;
+      } elsif ($s2 eq "\x7e") {		# LS1R
+        $gr = 1;
+        $offset += 2;
+      } elsif ($s2 eq "\x7d") {		# LS2R
+        $gr = 2;
+        $offset += 2;
+      } elsif ($s2 eq "\x7c") {		# LS3R
+        $gr = 3;
+        $offset += 2;
+      } elsif ($s2 eq "\x24") {
+        my $s3 = substr($src, $offset + 2, 1);
+        if ($s3 eq "\x28") {			# DRCS2_G0 \x1b\x24\x28\x20\xXX
+          $ops{0} = $drcs{substr($src, $offset + 4, 1)};
+          $offset += 5;
+        } elsif ($s3 eq "\x29") {
+          my $s4 = substr($src, $offset + 3, 1);
+          if ($s4 eq "\x20") {			# DRCS2_G1 \x1b\x24\x29\x20\xXX
+            $ops{1} = $drcs{substr($src, $offset + 4, 1)};
+            $offset += 5;
+          } else {				# GSET2_G1 \x1b\x24\x29\xXX
+            $ops{1} = $gset{$s4};
+            $offset += 4;
+          }
+        } elsif ($s3 eq "\x2a") {
+          my $s4 = substr($src, $offset + 3, 1);
+          if ($s4 eq "\x20") {			# DRCS2_G2 \x1b\x24\x2a\x20\xXX
+            $ops{2} = $drcs{substr($src, $offset + 4, 1)};
+            $offset += 5;
+          } else 	{			# GSET2_G2 \x1b\x24\x2a\xXX
+            $ops{2} = $gset{$s4};
+            $offset += 4;
+          }
+        } elsif ($s3 eq "\x2b") {
+          my $s4 = substr($src, $offset + 3, 1);
+          if ($s4 eq "\x20") {			# DRCS2_G3 \x1b\x24\x2b\x20\xXX
+            $ops{3} = $drcs{substr($src, $offset + 4, 1)};
+            $offset += 5;
+          } else {				# GSET2_G3 \x1b\x24\x2b\xXX
+            $ops{3} = $gset{$s4};
+            $offset += 4;
+          }
+        } else {				# GSET2_G0 \x1b\x24\xXX
+          $ops{0} = $gset{$s3};
+          $offset += 3;
+        }
+      } elsif ($s2 eq "\x28") {
+        my $s3 = substr($src, $offset + 2, 1);
+        if ($s3 eq "\x20") {			# DRCS1_G0 \x1b\x28\x20\xXX
+          $ops{0} = $drcs{substr($src, $offset + 3, 1)};
+          $offset += 4;
+        } else {				# GSET1_G0 \x1b\x28\xXX
+          $ops{0} = $gset{$s3};
+          $offset += 3;
+        }
+      } elsif ($s2 eq "\x29") {
+        my $s3 = substr($src, $offset + 2, 1);
+        if ($s3 eq "\x20") {			# DRCS1_G1 \x1b\x29\x20\xXX
+          $ops{1} = $drcs{substr($src, $offset + 3, 1)};
+          $offset += 4;
+        } else {				# GSET1_G1 \x1b\x29\xXX
+          $ops{1} = $gset{$s3};
+          $offset += 3;
+        }
+      } elsif ($s2 eq "\x2a") {
+        my $s3 = substr($src, $offset + 2, 1);
+        if ($s3 eq "\x20") {			# DRCS1_G2 \x1b\x2a\x20\xXX
+          $ops{2} = $drcs{substr($src, $offset + 3, 1)};
+          $offset += 4;
+        } else {				# GSET1_G2 \x1b\x2a\xXX
+          $ops{2} = $gset{$s3};
+          $offset += 3;
+        }
+      } elsif ($s2 eq "\x2b") {
+        my $s3 = substr($src, $offset + 2, 1);
+        if ($s3 eq "\x20") {			# DRCS1_G3 \x1b\x2b\x20\xXX
+          $ops{3} = $drcs{substr($src, $offset + 3, 1)};
+          $offset += 4;
+        } else {				# GSET1_G3 \x1b\x2b\xXX
+          $ops{3} = $gset{$s3};
+          $offset += 3;
+        }
+      } else {
+        map { printf STDERR "%02x",$_ } unpack("C*", substr($src, $offset, 5)); print STDERR "\n";
+        die "break escape sequence\n";
+      }
+    } elsif ($s1 == 0x89) {			# MSZ
       ++$offset;
-    } elsif ($s1 =~ /^\x89/) {			# MSZ
+    } elsif ($s1 == 0x8a) {			# NSZ
       ++$offset;
-    } elsif ($s1 =~ /^\x8a/) {			# NSZ
+    } elsif ($s1 == 0x20 or $s1 == 0xa0) {	# SPC
+      $dest .= " ";
       ++$offset;
-    } elsif ($s1 =~ /^\x20/) {			# SPC
-      ++$offset;
-    } elsif (unpack("C", $s1) >= 0x21 && unpack("C", $s1) <= 0x7e) { # GL
+    } elsif ($s1 >= 0x21 && $s1 <= 0x7e) { # GL
       my $op = $ss ? $ops{$ss} : $ops{$gl};
       my $size = $charsize{$op};
       $ss = 0;
-      if (length($s1) >= $size) {
-        $dest .= &$op(substr($s1, 0, $size)) || '';
+      if (length($src) >= $offset + $size) {
+        $dest .= &$op(substr($src, $offset, $size)) || '';
       }
       $offset += $size;
-    } elsif ($s1 =~ /^\xa0/) {	# SPC
-      $dest .= " ";
-      ++$offset;
-    } elsif (unpack("C", $s1) >= 0xa1 && unpack("C", $s1) <= 0xfe) { # GR
-      my $size = $charsize{$ops{$gr}};
-      if (length($s1) >= $size) {
-        $dest .= $ops{$gr}(substr($s1, 0, $size)) || '';
+    } elsif ($s1 >= 0xa1 && $s1 <= 0xfe) { # GR
+      my $op = $ops{$gr};
+      my $size = $charsize{$op};
+      if (length($src) >= $offset + $size) {
+        $dest .= &$op(substr($src, $offset, $size)) || '';
       }
       $offset += $size;
     } else {
@@ -288,12 +342,16 @@ sub PutSymbolChar {
   } elsif ($ku == 93) {
     return $symbol{93}[$n - 0x7d21];
   } elsif ($ku == 94) {
-    return $symbol{"94_alt"}[$n - 0x7e21];
+    return $symbol{94}[$n - 0x7e21];
   }
   return '';
 }
 
 sub PutMosaicChar {
+  return '';
+}
+
+sub PutDRCSChar {
   return '';
 }
 
