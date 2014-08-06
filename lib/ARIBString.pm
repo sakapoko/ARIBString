@@ -146,7 +146,6 @@ sub utf8 {
   #map { printf "%02x",$_ } unpack("C*", $src); print "\n";
 
   while (length($src) > $offset) {
-    #my $s1 = unpack("C", substr($src, $offset++, 1));
     my $s1 = substr($src, $offset, 5);
 
     if ($s1 =~ /^\x0f/) {			# LS0
@@ -227,15 +226,21 @@ sub utf8 {
       ++$offset;
     } elsif (unpack("C", $s1) >= 0x21 && unpack("C", $s1) <= 0x7e) { # GL
       my $op = $ss ? $ops{$ss} : $ops{$gl};
+      my $size = $charsize{$op};
       $ss = 0;
-      $dest .= &$op(substr($s1, 0, $charsize{$op}));
-      $offset += $charsize{$op};
+      if (length($s1) >= $size) {
+        $dest .= &$op(substr($s1, 0, $size)) || '';
+      }
+      $offset += $size;
     } elsif ($s1 =~ /^\xa0/) {	# SPC
       $dest .= " ";
       ++$offset;
     } elsif (unpack("C", $s1) >= 0xa1 && unpack("C", $s1) <= 0xfe) { # GR
-      $dest .= $ops{$gr}(substr($s1, 0, $charsize{$ops{$gr}}));
-      $offset += $charsize{$ops{$gr}};
+      my $size = $charsize{$ops{$gr}};
+      if (length($s1) >= $size) {
+        $dest .= $ops{$gr}(substr($s1, 0, $size)) || '';
+      }
+      $offset += $size;
     } else {
       $offset++;
     }
