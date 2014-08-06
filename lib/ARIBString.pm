@@ -136,30 +136,31 @@ sub utf8 {
   my $offset = 0;
   my $gl = 0;
   my $gr = 2;
+  my $ss = 0;
   my %ops = (
     0 => \&PutKanjiChar,
     1 => \&PutAlphaNumeric,
     2 => \&PutHiraganaChar,
     3 => \&PutKatakanaChar,
   );
-  #map { printf("%02x",$_) } unpack("C*", $src); print "\n";
+  #map { printf "%02x",$_ } unpack("C*", $src); print "\n";
 
   while (length($src) > $offset) {
     #my $s1 = unpack("C", substr($src, $offset++, 1));
     my $s1 = substr($src, $offset, 5);
 
-    if ($s1 =~ /^\x0f/) {			# LS0 -> G0_GL KANJI
+    if ($s1 =~ /^\x0f/) {			# LS0
       $gl = 0;
       ++$offset;
-    } elsif ($s1 =~ /^\x0e/) {			# LS1 -> G1_GL
+    } elsif ($s1 =~ /^\x0e/) {			# LS1
       $gl = 1;
       ++$offset;
-    } elsif ($s1 =~ /^\x19(.)/) {		# SS2
-      $dest .= $ops{2}($1);
-      $offset += 2;
-    } elsif ($s1 =~ /^\x1d(.)/) {		# SS3 -> KANA
-      $dest .= $ops{3}($1);
-      $offset += 2;
+    } elsif ($s1 =~ /^\x19/) {			# SS2
+      $ss = 2;
+      ++$offset;
+    } elsif ($s1 =~ /^\x1d/) {			# SS3
+      $ss = 3;
+      ++$offset;
     } elsif ($s1 =~ /^\x1b\x6e/) {		# LS2
       $gl = 2;
       # LockingShiftGL(2)
@@ -225,8 +226,10 @@ sub utf8 {
     } elsif ($s1 =~ /^\x20/) {			# SPC
       ++$offset;
     } elsif (unpack("C", $s1) >= 0x21 && unpack("C", $s1) <= 0x7e) { # GL
-      $dest .= $ops{$gl}(substr($s1, 0, $charsize{$ops{$gl}}));
-      $offset += $charsize{$ops{$gl}};
+      my $op = $ss ? $ops{$ss} : $ops{$gl};
+      $ss = 0;
+      $dest .= &$op(substr($s1, 0, $charsize{$op}));
+      $offset += $charsize{$op};
     } elsif ($s1 =~ /^\xa0/) {	# SPC
       $dest .= " ";
       ++$offset;
@@ -238,9 +241,6 @@ sub utf8 {
     }
   }
   return Encode::encode('utf-8', $dest);
-}
-
-sub ProcessEscape {
 }
 
 sub PutKanjiChar {
