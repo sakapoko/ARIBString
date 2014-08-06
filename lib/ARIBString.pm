@@ -265,7 +265,7 @@ sub PutJisKatakanaChar {
 
 sub PutAlphaNumeric {
   my $s = shift;
-  return $s; # asis
+  return chr(unpack("C", $s) & 0x7f);
 }
 
 sub PutSymbolChar {
