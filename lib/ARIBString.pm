@@ -178,7 +178,7 @@ my %drcs = (
   "\x70" => \&PutDRCSChar,	# DRCS-Macro
 );
 
-sub utf8 {
+sub raw {
   my $src = shift;
   my $dest = '';
   my $offset = 0;
@@ -329,8 +329,10 @@ sub utf8 {
       $offset++;
     }
   }
-  #print Encode::encode('utf-8', $dest)."\n";
-  return Encode::encode('utf-8', $dest);
+  return $dest;
 }
 
+sub utf8 {
+  Encode::encode('utf-8', &raw(shift));
+}
 1;
