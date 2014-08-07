@@ -4,47 +4,59 @@ use warnings;
 use utf8;
 use Encode;
 
-my $hiragana =
-  "　ぁあぃいぅうぇえぉおかがきぎく".
-  "ぐけげこごさざしじすずせぜそぞた".
-  "だちぢっつづてでとどなにぬねのは".
-  "ばぱひびぴふぶぷへべぺほぼぽまみ".
-  "むめもゃやゅゆょよらりるれろゎわ".
-  "ゐゑをん　　　ゝゞー。「」、・　";
-
-my $katakana =
-  "　ァアィイゥウェエォオカガキギク".
-  "グケゲコゴサザシジスズセゼソゾタ".
-  "ダチヂッツヅテデトドナニヌネノハ".
-  "バパヒビピフブプヘベペホボポマミ".
-  "ムメモャヤュユョヨラリルレロヮワ".
-  "ヰヱヲンヴヵヶヽヾー。「」、・　";
-
-my $jisx_0201_katakana =
-  "　。「」、・ヲァィゥェォャュョッ".
-  "ーアイウエオカキクケコサシスセソ".
-  "タチツテトナニヌネノハヒフヘホマ".
-  "ミムメモヤユヨラリルレロワン゛゜".
-  "　　　　　　　　　　　　　　　　".
-  "　　　　　　　　　　　　　　　　";
-
-# 2-STD-B24v5_3-1p3.pdf P.80 表 7-11 ISO/IEC 10646:2003
-my %symbol = (
+my %symbols = (
+  alnum => [
+    "！","”","＃","＄","％","＆","’","（","）","＊","＋","，","－","．","／",
+    "０", "１", "２", "３", "４", "５", "６", "７", "８", "９", "：", "；", "＜", "＝", "＞", "？",
+    "＠", "Ａ", "Ｂ", "Ｃ", "Ｄ", "Ｅ", "Ｆ", "Ｇ", "Ｈ", "Ｉ", "Ｊ", "Ｋ", "Ｌ", "Ｍ", "Ｎ", "Ｏ",
+    "Ｐ", "Ｑ", "Ｒ", "Ｓ", "Ｔ", "Ｕ", "Ｖ", "Ｗ", "Ｘ", "Ｙ", "Ｚ", "［", "￥", "］", "＾", "＿",
+    "　", "ａ", "ｂ", "ｃ", "ｄ", "ｅ", "ｆ", "ｇ", "ｈ", "ｉ", "ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ",
+    "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ", "｛", "｜", "｝", "￣", "　"
+  ],
+  hiragana => [
+    "ぁ", "あ", "ぃ", "い", "ぅ", "う", "ぇ", "え", "ぉ", "お", "か", "が", "き", "ぎ", "く",
+    "ぐ", "け", "げ", "こ", "ご", "さ", "ざ", "し", "じ", "す", "ず", "せ", "ぜ", "そ", "ぞ", "た",
+    "だ", "ち", "ぢ", "っ", "つ", "づ", "て", "で", "と", "ど", "な", "に", "ぬ", "ね", "の", "は",
+    "ば", "ぱ", "ひ", "び", "ぴ", "ふ", "ぶ", "ぷ", "へ", "べ", "ぺ", "ほ", "ぼ", "ぽ", "ま", "み",
+    "む", "め", "も", "ゃ", "や", "ゅ", "ゆ", "ょ", "よ", "ら", "り", "る", "れ", "ろ", "ゎ", "わ",
+    "ゐ", "ゑ", "を", "ん", "　", "　", "　", "ゝ", "ゞ", "ー", "。", "「", "」", "、", "・", "　"
+  ],
+  katakana => [
+    "ァ", "ア", "ィ", "イ", "ゥ", "ウ", "ェ", "エ", "ォ", "オ", "カ", "ガ", "キ", "ギ", "ク",
+    "グ", "ケ", "ゲ", "コ", "ゴ", "サ", "ザ", "シ", "ジ", "ス", "ズ", "セ", "ゼ", "ソ", "ゾ", "タ",
+    "ダ", "チ", "ヂ", "ッ", "ツ", "ヅ", "テ", "デ", "ト", "ド", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ",
+    "バ", "パ", "ヒ", "ビ", "ピ", "フ", "ブ", "プ", "ヘ", "ベ", "ペ", "ホ", "ボ", "ポ", "マ", "ミ",
+    "ム", "メ", "モ", "ャ", "ヤ", "ュ", "ユ", "ョ", "ヨ", "ラ", "リ", "ル", "レ", "ロ", "ヮ", "ワ",
+    "ヰ", "ヱ", "ヲ", "ン", "ヴ", "ヵ", "ヶ", "ヽ", "ヾ", "ー", "。", "「", "」", "、", "・", "　"
+  ],
+  jisx_0201_katakana => [
+    "。", "「", "」", "、", "・", "ヲ", "ァ", "ィ", "ゥ", "ェ", "ォ", "ャ", "ュ", "ョ", "ッ",
+    "ー", "ア", "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ", "サ", "シ", "ス", "セ", "ソ",
+    "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ", "ヒ", "フ", "ヘ", "ホ", "マ",
+    "ミ", "ム", "メ", "モ", "ヤ", "ユ", "ヨ", "ラ", "リ", "ル", "レ", "ロ", "ワ", "ン", "゛", "゜",
+  ],
+  # 2-STD-B24v5_3-1p3.pdf P.80 表 7-11 ISO/IEC 10646:2003
   85 => [ # 0x7521
-    0x3402, 0x20158, 0x4EFD, 0x4EFF, 0x4F9A, 0x4FC9, 0x509C, 0x511E, 0x51BC, 0x351F, 0x5307, 0x5361,
-    0x536C, 0x8A79, 0x20BB7, 0x544D, 0x5496, 0x549C, 0x54A9, 0x550E, 0x554A, 0x5672, 0x56E4, 0x5733,
-    0x5734, 0xFA10, 0x5880, 0x59E4, 0x5A23, 0x5A55, 0x5BEC, 0xFA11, 0x37e2, 0x5EAC, 0x5F34, 0x5F45,
-    0x5FB7, 0x6017, 0xFA6B, 0x6130, 0x6624, 0x66C8, 0x66D9, 0x66FA, 0x66FB, 0x6852, 0x9fc4, 0x6911,
-    0x693B, 0x6A45, 0x6A91, 0x6ADB, 0x233CC, 0x233FE, 0x235C4, 0x6BF1, 0x6CE0, 0x6D2E, 0xFA45, 0x6DBF,
-    0x6DCA, 0x6DF8, 0xFA46, 0x6F5E, 0x6FF9, 0x7064, 0xFA6C, 0x242EE, 0x7147, 0x71C1, 0x7200, 0x739F,
-    0x73A8, 0x73C9, 0x73D6, 0x741B, 0x7421, 0xFA4A, 0x7426, 0x742A, 0x742C, 0x7439, 0x744B, 0x3EDA,
-    0x7575, 0x7581, 0x7772, 0x4093, 0x78C8, 0x78E0, 0x7947, 0x79AE, 0x9FC6, 0x4103
+    "\x{3402}", "\x{20158}", "\x{4EFD}", "\x{4EFF}", "\x{4F9A}", "\x{4FC9}", "\x{509C}", "\x{511E}",
+    "\x{51BC}", "\x{351F}", "\x{5307}", "\x{5361}", "\x{536C}", "\x{8A79}", "\x{20BB7}", "\x{544D}",
+    "\x{5496}", "\x{549C}", "\x{54A9}", "\x{550E}", "\x{554A}", "\x{5672}", "\x{56E4}", "\x{5733}",
+    "\x{5734}", "\x{FA10}", "\x{5880}", "\x{59E4}", "\x{5A23}", "\x{5A55}", "\x{5BEC}", "\x{FA11}",
+    "\x{37e2}", "\x{5EAC}", "\x{5F34}", "\x{5F45}", "\x{5FB7}", "\x{6017}", "\x{FA6B}", "\x{6130}",
+    "\x{6624}", "\x{66C8}", "\x{66D9}", "\x{66FA}", "\x{66FB}", "\x{6852}", "\x{9fc4}", "\x{6911}",
+    "\x{693B}", "\x{6A45}", "\x{6A91}", "\x{6ADB}", "\x{233CC}", "\x{233FE}", "\x{235C4}", "\x{6BF1}",
+    "\x{6CE0}", "\x{6D2E}", "\x{FA45}", "\x{6DBF}", "\x{6DCA}", "\x{6DF8}", "\x{FA46}", "\x{6F5E}",
+    "\x{6FF9}", "\x{7064}", "\x{FA6C}", "\x{242EE}", "\x{7147}", "\x{71C1}", "\x{7200}", "\x{739F}",
+    "\x{73A8}", "\x{73C9}", "\x{73D6}", "\x{741B}", "\x{7421}", "\x{FA4A}", "\x{7426}", "\x{742A}",
+    "\x{742C}", "\x{7439}", "\x{744B}", "\x{3EDA}", "\x{7575}", "\x{7581}", "\x{7772}", "\x{4093}",
+    "\x{78C8}", "\x{78E0}", "\x{7947}", "\x{79AE}", "\x{9FC6}", "\x{4103}"
   ],
   86 => [ # 0x7621
-    0x9FC5, 0x79DA, 0x7A1E, 0x7B7F, 0x7C31, 0x4264, 0x7D8B, 0x7FA1, 0x8118, 0x813A, 0xFA6D, 0x82AE,
-    0x845B, 0x84DC, 0x84EC, 0x8559, 0x85CE, 0x8755, 0x87EC, 0x880B, 0x88F5, 0x89D2, 0x8AF6, 0x8DCE,
-    0x8FBB, 0x8FF6, 0x90DD, 0x9127, 0x912D, 0x91B2, 0x9233, 0x9288, 0x9321, 0x9348, 0x9592, 0x96DE,
-    0x9903, 0x9940, 0x9AD9, 0x9BD6, 0x9DD7, 0x9EB4, 0x9EB5,
+    "\x{9FC5}", "\x{79DA}", "\x{7A1E}", "\x{7B7F}", "\x{7C31}", "\x{4264}", "\x{7D8B}", "\x{7FA1}",
+    "\x{8118}", "\x{813A}", "\x{FA6D}", "\x{82AE}", "\x{845B}", "\x{84DC}", "\x{84EC}", "\x{8559}",
+    "\x{85CE}", "\x{8755}", "\x{87EC}", "\x{880B}", "\x{88F5}", "\x{89D2}", "\x{8AF6}", "\x{8DCE}",
+    "\x{8FBB}", "\x{8FF6}", "\x{90DD}", "\x{9127}", "\x{912D}", "\x{91B2}", "\x{9233}", "\x{9288}",
+    "\x{9321}", "\x{9348}", "\x{9592}", "\x{96DE}", "\x{9903}", "\x{9940}", "\x{9AD9}", "\x{9BD6}",
+    "\x{9DD7}", "\x{9EB4}", "\x{9EB5}"
   ],
   90 => [
     '', '', '', '', '', '', '', '',
@@ -101,6 +113,21 @@ my %symbol = (
 
   ],
 );
+
+sub PutKanjiChar { Encode::decode('jis0208-raw', pack("n", shift)) }
+sub PutHiraganaChar { $symbols{hiragana}[(shift) - 0x21] }
+sub PutKatakanaChar { $symbols{katakana}[(shift) - 0x21] }
+sub PutJisKatakanaChar { $symbols{jisx_0201_katakana}[(shift) - 0x21] }
+sub PutAlphaNumeric { $symbols{alnum}[(shift) - 0x21] }
+sub PutMosaicChar {}
+sub PutDRCSChar {}
+
+sub PutSymbolChar {
+  my $s = shift;
+  my $ku = ($s >> 8) - 0x20;
+  $symbols{$ku}[$s - (0x7521 + 0x100 * ($ku - 85))];
+}
+
 
 my %charsize = (
   \&PutKanjiChar => 2,
@@ -272,6 +299,7 @@ sub utf8 {
       } else {
         map { printf STDERR "%02x",$_ } unpack("C*", substr($src, $offset, 5)); print STDERR "\n";
         die "break escape sequence\n";
+        $offset++;
       }
     } elsif ($s1 == 0x89) {			# MSZ
       ++$offset;
@@ -280,79 +308,29 @@ sub utf8 {
     } elsif ($s1 == 0x20 or $s1 == 0xa0) {	# SPC
       $dest .= " ";
       ++$offset;
-    } elsif ($s1 >= 0x21 && $s1 <= 0x7e) { # GL
+    } elsif ($s1 >= 0x21 && $s1 <= 0x7e) {	# GL
       my $op = $ss ? $ops{$ss} : $ops{$gl};
       my $size = $charsize{$op};
+      my $data = unpack($size == 1 ? "C" : "n", substr($src, $offset, $size));
       $ss = 0;
       if (length($src) >= $offset + $size) {
-        $dest .= &$op(substr($src, $offset, $size)) || '';
+        $dest .= &$op($data & 0x7f7f) || '';
       }
       $offset += $size;
-    } elsif ($s1 >= 0xa1 && $s1 <= 0xfe) { # GR
+    } elsif ($s1 >= 0xa1 && $s1 <= 0xfe) {	# GR
       my $op = $ops{$gr};
       my $size = $charsize{$op};
+      my $data = unpack($size == 1 ? "C" : "n", substr($src, $offset, $size));
       if (length($src) >= $offset + $size) {
-        $dest .= &$op(substr($src, $offset, $size)) || '';
+        $dest .= &$op($data & 0x7f7f) || '';
       }
       $offset += $size;
     } else {
       $offset++;
     }
   }
+  #print Encode::encode('utf-8', $dest)."\n";
   return Encode::encode('utf-8', $dest);
-}
-
-sub PutKanjiChar {
-  my $s = shift;
-  return Encode::decode('jis0208-raw', $s);
-}
-
-sub PutHiraganaChar {
-  my $s = shift;
-  return substr($hiragana, (unpack("C", $s) & 0x7f) - 0x20, 1);
-}
-
-sub PutKatakanaChar {
-  my $s = shift;
-  return substr($katakana, (unpack("C", $s) & 0x7f) - 0x20, 1);
-}
-
-sub PutJisKatakanaChar {
-  my $s = shift;
-  return substr($jisx_0201_katakana, (unpack("C", $s) & 0x7f) - 0x20, 1);
-}
-
-sub PutAlphaNumeric {
-  my $s = shift;
-  return chr(unpack("C", $s) & 0x7f);
-}
-
-sub PutSymbolChar {
-  my $s = shift;
-  my $n = unpack("n", $s);
-  my $ku = ($n >> 8) - 0x20;
-  if ($ku == 85) {
-    return chr($symbol{85}[$n - 0x7521]);
-  } elsif ($ku == 86) {
-    return chr($symbol{86}[$n - 0x7621]);
-  } elsif ($ku == 90) {
-    return $symbol{90}[$n - 0x7a21];
-  } elsif ($ku == 92) {
-    return $symbol{92}[$n - 0x7c21];
-  } elsif ($ku == 93) {
-    return $symbol{93}[$n - 0x7d21];
-  } elsif ($ku == 94) {
-    return $symbol{94}[$n - 0x7e21];
-  }
-  return '';
-}
-
-sub PutMosaicChar {
-  return '';
-}
-
-sub PutDRCSChar {
-  return '';
 }
 
 1;
