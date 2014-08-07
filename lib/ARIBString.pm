@@ -114,15 +114,34 @@ my %symbols = (
   ],
 );
 
-sub PutKanjiChar { Encode::decode('jis0208-raw', pack("n", shift)) }
-sub PutHiraganaChar { $symbols{hiragana}[(shift) - 0x21] }
-sub PutKatakanaChar { $symbols{katakana}[(shift) - 0x21] }
-sub PutJisKatakanaChar { $symbols{jisx_0201_katakana}[(shift) - 0x21] }
+sub PutKanji { Encode::decode('jis0208-raw', pack("n", shift)) }
+sub PutHiragana { $symbols{hiragana}[(shift) - 0x21] }
+sub PutKatakana { $symbols{katakana}[(shift) - 0x21] }
+sub PutJisKatakana { $symbols{jisx_0201_katakana}[(shift) - 0x21] }
 sub PutAlphaNumeric { $symbols{alnum}[(shift) - 0x21] }
-sub PutMosaicChar {}
-sub PutDRCSChar {}
+sub PutMosaicA {}
+sub PutMosaicB {}
+sub PutMosaicC {}
+sub PutMosaicD {}
+sub PutDRCS0 {}
+sub PutDRCS1 {}
+sub PutDRCS2 {}
+sub PutDRCS3 {}
+sub PutDRCS4 {}
+sub PutDRCS5 {}
+sub PutDRCS6 {}
+sub PutDRCS7 {}
+sub PutDRCS8 {}
+sub PutDRCS9 {}
+sub PutDRCS10 {}
+sub PutDRCS11 {}
+sub PutDRCS12 {}
+sub PutDRCS13 {}
+sub PutDRCS14 {}
+sub PutDRCS15 {}
+sub PutDRCSMacro {}
 
-sub PutSymbolChar {
+sub PutSymbol {
   my $s = shift;
   my $ku = ($s >> 8) - 0x20;
   $symbols{$ku}[$s - (0x7521 + 0x100 * ($ku - 85))];
@@ -130,52 +149,71 @@ sub PutSymbolChar {
 
 
 my %charsize = (
-  \&PutKanjiChar => 2,
-  \&PutHiraganaChar => 1,
-  \&PutKatakanaChar => 1,
+  \&PutKanji => 2,
+  \&PutHiragana => 1,
+  \&PutKatakana => 1,
   \&PutAlphaNumeric => 1,
-  \&PutSymbolChar => 2,
-  \&PutMosaicChar => 1,
-  \&PutJisKatakanaChar => 1,
-  \&PutDRCSChar => 1,
+  \&PutSymbol => 2,
+  \&PutMosaicA => 1,
+  \&PutMosaicB => 1,
+  \&PutMosaicC => 1,
+  \&PutMosaicD => 1,
+  \&PutJisKatakana => 1,
+  \&PutDRCS0 => 2,
+  \&PutDRCS1 => 1,
+  \&PutDRCS2 => 1,
+  \&PutDRCS3 => 1,
+  \&PutDRCS4 => 1,
+  \&PutDRCS5 => 1,
+  \&PutDRCS6 => 1,
+  \&PutDRCS7 => 1,
+  \&PutDRCS8 => 1,
+  \&PutDRCS9 => 1,
+  \&PutDRCS10 => 1,
+  \&PutDRCS11 => 1,
+  \&PutDRCS12 => 1,
+  \&PutDRCS13 => 1,
+  \&PutDRCS14 => 1,
+  \&PutDRCS15 => 1,
+  \&PutDRCSMacro => 1,
 );
 
 my %gset = (
-  "\x42" => \&PutKanjiChar,	# 漢字系集合
-  "\x4a" => \&PutAlphaNumeric,	# 英数集合
-  "\x30" => \&PutHiraganaChar,	# 平仮名集合
-  "\x31" => \&PutKatakanaChar,	# 片仮名集合
-  "\x32" => \&PutMosaicChar,	# モザイク集合A
-  "\x33" => \&PutMosaicChar,	# モザイク集合B
-  "\x34" => \&PutMosaicChar,	# モザイク集合C
-  "\x35" => \&PutMosaicChar,	# モザイク集合D
-  "\x36" => \&PutAlphaNumeric,	# Proportional AlphaNumeric
-  "\x37" => \&PutHiraganaChar,	# Proportional Hiragana
-  "\x38" => \&PutKatakanaChar,	# Proportional Katakana
-  "\x39" => \&PutKanjiChar,	# JIS互換漢字1面集合 (JISX0213:2004 1面)
-  "\x3a" => \&PutKanjiChar,	# JIS互換漢字2面集合 (JISX0213:2004 2面)
-  "\x3b" => \&PutSymbolChar,	# 追加記号集合（ARIB外字）
-  "\x49" => \&PutJisKatakanaChar,
+  "\x42" => \&PutKanji,		# 漢字
+  "\x4a" => \&PutAlphaNumeric,	# 英数
+  "\x30" => \&PutHiragana,	# 平仮名
+  "\x31" => \&PutKatakana,	# 片仮名
+  "\x32" => \&PutMosaicA,	# モザイクA
+  "\x33" => \&PutMosaicB,	# モザイクB
+  "\x34" => \&PutMosaicC,	# モザイクC
+  "\x35" => \&PutMosaicD,	# モザイクD
+  "\x36" => \&PutAlphaNumeric,	# プロポーショナル英数
+  "\x37" => \&PutHiragana,	# プロポーショナル平仮名
+  "\x38" => \&PutKatakana,	# プロポーショナル片仮名
+  "\x39" => \&PutKanji,		# JIS互換漢字1面 (JISX0213:2004 1面)
+  "\x3a" => \&PutKanji,		# JIS互換漢字2面 (JISX0213:2004 2面)
+  "\x3b" => \&PutSymbol,	# 追加記号（ARIB外字）
+  "\x49" => \&PutJisKatakana,	# JISX0201片仮名
 );
 
 my %drcs = (
-  "\x40" => \&PutDRCSChar,	# DRCS-0
-  "\x41" => \&PutDRCSChar,	# DRCS-1
-  "\x42" => \&PutDRCSChar,	# DRCS-2
-  "\x43" => \&PutDRCSChar,	# DRCS-3
-  "\x44" => \&PutDRCSChar,	# DRCS-4
-  "\x45" => \&PutDRCSChar,	# DRCS-5
-  "\x46" => \&PutDRCSChar,	# DRCS-6
-  "\x47" => \&PutDRCSChar,	# DRCS-7
-  "\x48" => \&PutDRCSChar,	# DRCS-8
-  "\x49" => \&PutDRCSChar,	# DRCS-9
-  "\x4a" => \&PutDRCSChar,	# DRCS-10
-  "\x4b" => \&PutDRCSChar,	# DRCS-11
-  "\x4c" => \&PutDRCSChar,	# DRCS-12
-  "\x4d" => \&PutDRCSChar,	# DRCS-13
-  "\x4e" => \&PutDRCSChar,	# DRCS-14
-  "\x4f" => \&PutDRCSChar,	# DRCS-15
-  "\x70" => \&PutDRCSChar,	# DRCS-Macro
+  "\x40" => \&PutDRCS0,		# DRCS-0
+  "\x41" => \&PutDRCS1,		# DRCS-1
+  "\x42" => \&PutDRCS2,		# DRCS-2
+  "\x43" => \&PutDRCS3,		# DRCS-3
+  "\x44" => \&PutDRCS4,		# DRCS-4
+  "\x45" => \&PutDRCS5,		# DRCS-5
+  "\x46" => \&PutDRCS6,		# DRCS-6
+  "\x47" => \&PutDRCS7,		# DRCS-7
+  "\x48" => \&PutDRCS8,		# DRCS-8
+  "\x49" => \&PutDRCS9,		# DRCS-9
+  "\x4a" => \&PutDRCS10,	# DRCS-10
+  "\x4b" => \&PutDRCS11,	# DRCS-11
+  "\x4c" => \&PutDRCS12,	# DRCS-12
+  "\x4d" => \&PutDRCS13,	# DRCS-13
+  "\x4e" => \&PutDRCS14,	# DRCS-14
+  "\x4f" => \&PutDRCS15,	# DRCS-15
+  "\x70" => \&PutDRCSMacro,	# DRCS-Macro
 );
 
 sub raw {
@@ -186,12 +224,12 @@ sub raw {
   my $gr = 2;
   my $ss = 0;
   my %ops = (
-    0 => \&PutKanjiChar,
+    0 => \&PutKanji,
     1 => \&PutAlphaNumeric,
-    2 => \&PutHiraganaChar,
-    3 => \&PutKatakanaChar,
+    2 => \&PutHiragana,
+    3 => \&PutKatakana,
   );
-  #map { printf "%02x",$_ } unpack("C*", $src); print "\n";
+  #map { printf STDERR "%02x",$_ } unpack("C*", $src); print STDERR "\n";
 
   while (length($src) > $offset) {
     my $s1 = unpack("C", substr($src, $offset, 1));
@@ -297,9 +335,10 @@ sub raw {
           $offset += 3;
         }
       } else {
+        #die "broken escape sequence\n";
+        map { printf STDERR "%02x",$_ } unpack("C*", $src); print STDERR "\n";
         map { printf STDERR "%02x",$_ } unpack("C*", substr($src, $offset, 5)); print STDERR "\n";
-        die "break escape sequence\n";
-        $offset++;
+        last;
       }
     } elsif ($s1 == 0x89) {			# MSZ
       ++$offset;
