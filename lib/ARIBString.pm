@@ -4,6 +4,41 @@ use warnings;
 use utf8;
 use Encode;
 
+use overload
+  q("") => sub {$_[0]->as_string},
+  q(==) => sub { overload::StrVal($_[0]) eq overload::StrVal($_[1]) },
+  q(.=) => sub { $_[0]->append( $_[1] ) },
+  fallback => 1
+  ;
+sub new {
+  my $class = shift;
+  my $data = $_[0];
+  my $self = bless {}, $class;
+  my $ref = ref($data) ? $data : \$data;
+  $self->{_data_ref} = $ref;
+  $self->{_internal} = undef;
+  return $self;
+}
+sub append{
+  my $self  = shift;
+  my $data = $_[0];
+  my $ref;
+  if (ref($data) eq 'ARIBString') {
+    $ref = $data->{_data_ref};
+  } else {
+    $ref = ref($data) ? $data : \$data;
+  }
+  ${$self->{_data_ref}} .= $$ref;
+  $self->{_internal} = undef;
+  $self;
+}
+sub as_string {
+  my $self  = shift;
+  $self->{_internal} = $self->raw(${$self->{_data_ref}}) unless ($self->{_internal});
+  return $self->{_internal};
+}
+
+
 my %symbols = (
   alnum => [
     "！","”","＃","＄","％","＆","’","（","）","＊","＋","，","－","．","／",
@@ -217,6 +252,7 @@ my %drcs = (
 );
 
 sub raw {
+  my $self = shift;
   my $src = shift;
   my $dest = '';
   my $offset = 0;
@@ -371,7 +407,4 @@ sub raw {
   return $dest;
 }
 
-sub utf8 {
-  Encode::encode('utf-8', &raw(shift));
-}
 1;
