@@ -418,6 +418,3 @@ ok("$a" eq "あいうう");
 ok(ARIBString->new(\pack("H*", "2422")) eq "あ");
 
 done_testing();
-
-# rm -r cover_db && PERL5OPT="-MDevel::Cover" make test && cover --report html
-# http://www.infonet.co.jp/ueyama/ip/binary/x0208txt.html
