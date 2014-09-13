@@ -4,9 +4,10 @@ use warnings;
 use utf8;
 use Encode;
 
+our $VERSION = '0.90';
+
 use overload
   q("") => sub {$_[0]->as_string},
-  q(==) => sub { overload::StrVal($_[0]) eq overload::StrVal($_[1]) },
   q(.=) => sub { $_[0]->append( $_[1] ) },
   fallback => 1
   ;
