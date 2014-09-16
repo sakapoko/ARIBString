@@ -253,13 +253,16 @@ my %drcs = (
 );
 
 sub raw {
-  my $self = shift;
-  my @src  = unpack("C*", shift);
-  my $dest = '';
-  my $gl   = 0;
-  my $gr   = 2;
-  my $ss   = 0;
-  my %ops  = (
+  my $self    = shift;
+  my @src     = unpack("C*", shift);
+  my $dest    = '';
+  my $gl      = 0;
+  my $gr      = 2;
+  my $ss      = 0;
+  my $control = 0;
+  my $to      = 0;
+  my $size    = 1;
+  my %ops     = (
     0 => \&PutKanji,
     1 => \&PutAlphaNumeric,
     2 => \&PutHiragana,
@@ -267,130 +270,65 @@ sub raw {
   );
 
   while (scalar(@src)) {
+    $size = 1;
     if ($src[0] == 0x0f) {    # LS0
       $gl = 0;
-      shift @src;
     } elsif ($src[0] == 0x0e) {    # LS1
       $gl = 1;
-      shift @src;
     } elsif ($src[0] == 0x19) {    # SS2
       $ss = 2;
-      shift @src;
     } elsif ($src[0] == 0x1d) {    # SS3
       $ss = 3;
-      shift @src;
     } elsif ($src[0] == 0x1b) {    # ESC
-      if ($src[1] == 0x6e) {       # LS2
+      shift @src;
+      if ($src[0] == 0x6e) {       # LS2
         $gl = 2;
-        splice(@src, 0, 2);
-      } elsif ($src[1] == 0x6f) {    # LS3
+      } elsif ($src[0] == 0x6f) {    # LS3
         $gl = 3;
-        splice(@src, 0, 2);
-      } elsif ($src[1] == 0x7e) {    # LS1R
+      } elsif ($src[0] == 0x7e) {    # LS1R
         $gr = 1;
-        splice(@src, 0, 2);
-      } elsif ($src[1] == 0x7d) {    # LS2R
+      } elsif ($src[0] == 0x7d) {    # LS2R
         $gr = 2;
-        splice(@src, 0, 2);
-      } elsif ($src[1] == 0x7c) {    # LS3R
+      } elsif ($src[0] == 0x7c) {    # LS3R
         $gr = 3;
-        splice(@src, 0, 2);
-      } elsif ($src[1] == 0x24) {
-        if ($src[2] == 0x28) {       # DRCS2_G0 \x1b\x24\x28\x20\xXX
-          $ops{0} = $drcs{$src[4]};
-          splice(@src, 0, 5);
-        } elsif ($src[2] == 0x29) {
-          if ($src[3] == 0x20) {     # DRCS2_G1 \x1b\x24\x29\x20\xXX
-            $ops{1} = $drcs{$src[4]};
-            splice(@src, 0, 5);
-          } else {                   # GSET2_G1 \x1b\x24\x29\xXX
-            $ops{1} = $gset{$src[3]};
-            splice(@src, 0, 4);
-          }
-        } elsif ($src[2] == 0x2a) {
-          if ($src[3] == 0x20) {     # DRCS2_G2 \x1b\x24\x2a\x20\xXX
-            $ops{2} = $drcs{$src[4]};
-            splice(@src, 0, 5);
-          } else {                   # GSET2_G2 \x1b\x24\x2a\xXX
-            $ops{2} = $gset{$src[3]};
-            splice(@src, 0, 4);
-          }
-        } elsif ($src[2] == 0x2b) {
-          if ($src[3] == 0x20) {     # DRCS2_G3 \x1b\x24\x2b\x20\xXX
-            $ops{3} = $drcs{$src[4]};
-            splice(@src, 0, 5);
-          } else {                   # GSET2_G3 \x1b\x24\x2b\xXX
-            $ops{3} = $gset{$src[3]};
-            splice(@src, 0, 4);
-          }
-        } else {    # GSET2_G0 \x1b\x24\xXX
-          $ops{0} = $gset{$src[2]};
-          splice(@src, 0, 3);
-        }
-      } elsif ($src[1] == 0x28) {
-        if ($src[2] == 0x20) {    # DRCS1_G0 \x1b\x28\x20\xXX
-          $ops{0} = $drcs{$src[3]};
-          splice(@src, 0, 4);
-        } else {                  # GSET1_G0 \x1b\x28\xXX
-          $ops{0} = $gset{$src[2]};
-          splice(@src, 0, 3);
-        }
-      } elsif ($src[1] == 0x29) {
-        if ($src[2] == 0x20) {    # DRCS1_G1 \x1b\x29\x20\xXX
-          $ops{1} = $drcs{$src[3]};
-          splice(@src, 0, 4);
-        } else {                  # GSET1_G1 \x1b\x29\xXX
-          $ops{1} = $gset{$src[2]};
-          splice(@src, 0, 3);
-        }
-      } elsif ($src[1] == 0x2a) {
-        if ($src[2] == 0x020) {    # DRCS1_G2 \x1b\x2a\x20\xXX
-          $ops{2} = $drcs{$src[3]};
-          splice(@src, 0, 4);
-        } else {                   # GSET1_G2 \x1b\x2a\xXX
-          $ops{2} = $gset{$src[2]};
-          splice(@src, 0, 3);
-        }
-      } elsif ($src[1] == 0x2b) {
-        if ($src[2] == 0x20) {     # DRCS1_G3 \x1b\x2b\x20\xXX
-          $ops{3} = $drcs{$src[3]};
-          splice(@src, 0, 4);
-        } else {                   # GSET1_G3 \x1b\x2b\xXX
-          $ops{3} = $gset{$src[2]};
-          splice(@src, 0, 3);
-        }
-      } else {
-        map {printf STDERR "%02x", $_} @src;
-        print STDERR "\n";
-        last;
+      } elsif ($src[0] == 0x24) {    # 2BYTES DRCS/GSET
+        $control = 1;
+        $to      = 0;
+        shift @src;
+        $size = 0;
+      }
+      if ($src[0] >= 0x28 and $src[0] <= 0x2b) {
+        $control = 1;
+        $to      = shift(@src) - 0x28;
+        $size = 0;
+      }
+      if ($control) {
+        $_ = shift @src;
+        $ops{$to} = ($_ == 0x20) ? $drcs{shift @src} : $gset{$_};
+        $control = 0;
+        $size = 0;
       }
     } elsif ($src[0] == 0x89) {    # MSZ
-      shift @src;
     } elsif ($src[0] == 0x8a) {    # NSZ
-      shift @src;
     } elsif ($src[0] == 0x20 or $src[0] == 0xa0) {    # SPC
       $dest .= " ";
-      shift @src;
     } elsif ($src[0] >= 0x21 and $src[0] <= 0x7e) {    # GL
       my $op = $ss ? $ops{$ss} : $ops{$gl};
-      my $size = $charsize{$op};
+      $size = $charsize{$op};
       $ss = 0;
       if (scalar(@src) >= $size) {
         my $data = $size == 1 ? $src[0] : ($src[0] << 8) + $src[1];
         $dest .= &$op($data & 0x7f7f) || '';
       }
-      splice(@src, 0, $size);
     } elsif ($src[0] >= 0xa1 and $src[0] <= 0xfe) {    # GR
       my $op   = $ops{$gr};
-      my $size = $charsize{$op};
+      $size = $charsize{$op};
       if (scalar(@src) >= $size) {
         my $data = $size == 1 ? $src[0] : ($src[0] << 8) + $src[1];
         $dest .= &$op($data & 0x7f7f) || '';
       }
-      splice(@src, 0, $size);
-    } else {
-      shift @src;
     }
+    splice(@src, 0, $size);
   }
   return $dest;
 }
