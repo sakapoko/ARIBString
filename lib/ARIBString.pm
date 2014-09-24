@@ -253,16 +253,15 @@ my %drcs = (
 );
 
 sub raw {
-  my $self    = shift;
-  my @src     = unpack("C*", shift);
-  my $dest    = '';
-  my $gl      = 0;
-  my $gr      = 2;
-  my $ss      = 0;
-  my $control = 0;
-  my $to      = 0;
-  my $size    = 1;
-  my %ops     = (
+  my $self   = shift;
+  my @src    = unpack("C*", shift);
+  my $dest   = '';
+  my $gl     = 0;
+  my $gr     = 2;
+  my $ss     = 0;
+  my $mapto  = undef;
+  my $escape = 0;
+  my %ops    = (
     0 => \&PutKanji,
     1 => \&PutAlphaNumeric,
     2 => \&PutHiragana,
@@ -270,7 +269,6 @@ sub raw {
   );
 
   while (scalar(@src)) {
-    $size = 1;
     if ($src[0] == 0x0f) {    # LS0
       $gl = 0;
     } elsif ($src[0] == 0x0e) {    # LS1
@@ -280,7 +278,9 @@ sub raw {
     } elsif ($src[0] == 0x1d) {    # SS3
       $ss = 3;
     } elsif ($src[0] == 0x1b) {    # ESC
-      shift @src;
+      $escape = 1;
+    } elsif ($escape) {
+      $escape = 0;
       if ($src[0] == 0x6e) {       # LS2
         $gl = 2;
       } elsif ($src[0] == 0x6f) {    # LS3
@@ -292,43 +292,43 @@ sub raw {
       } elsif ($src[0] == 0x7c) {    # LS3R
         $gr = 3;
       } elsif ($src[0] == 0x24) {    # 2BYTES DRCS/GSET
-        $control = 1;
-        $to      = 0;
-        shift @src;
-        $size = 0;
+        $mapto = 0;
+      } elsif ($src[0] >= 0x28 and $src[0] <= 0x2b) {    # 1BYTE DRCS/GSET
+        $mapto = $src[0] - 0x28;
       }
+    } elsif (defined($mapto)) {
       if ($src[0] >= 0x28 and $src[0] <= 0x2b) {
-        $control = 1;
-        $to      = shift(@src) - 0x28;
-        $size = 0;
+        $mapto = $src[0] - 0x28;
+      } else {
+        my $map = \%gset;
+        if ($src[0] == 0x20) {
+          shift @src;
+          $map = \%drcs;
+        }
+        $ops{$mapto} = $map->{$src[0]} if (scalar(@src) > 1);
+        undef($mapto);
       }
-      if ($control) {
-        $_ = shift @src;
-        $ops{$to} = ($_ == 0x20) ? $drcs{shift @src} : $gset{$_};
-        $control = 0;
-        $size = 0;
-      }
-    } elsif ($src[0] == 0x89) {    # MSZ
-    } elsif ($src[0] == 0x8a) {    # NSZ
+    } elsif ($src[0] == 0x89) {                       # MSZ
+    } elsif ($src[0] == 0x8a) {                       # NSZ
     } elsif ($src[0] == 0x20 or $src[0] == 0xa0) {    # SPC
       $dest .= " ";
     } elsif ($src[0] >= 0x21 and $src[0] <= 0x7e) {    # GL
       my $op = $ss ? $ops{$ss} : $ops{$gl};
-      $size = $charsize{$op};
-      $ss = 0;
-      if (scalar(@src) >= $size) {
-        my $data = $size == 1 ? $src[0] : ($src[0] << 8) + $src[1];
-        $dest .= &$op($data & 0x7f7f) || '';
-      }
+      my $data = 0;
+      last unless (scalar(@src) >= $charsize{$op});
+      $data = shift(@src) << 8 if ($charsize{$op} == 2);
+      $data += $src[0];
+      $dest .= &$op($data & 0x7f7f) || '';
+      $ss   = 0;
     } elsif ($src[0] >= 0xa1 and $src[0] <= 0xfe) {    # GR
-      my $op   = $ops{$gr};
-      $size = $charsize{$op};
-      if (scalar(@src) >= $size) {
-        my $data = $size == 1 ? $src[0] : ($src[0] << 8) + $src[1];
-        $dest .= &$op($data & 0x7f7f) || '';
-      }
+      my $op = $ops{$gr};
+      my $data = 0;
+      last unless (scalar(@src) >= $charsize{$op});
+      $data = shift(@src) << 8 if ($charsize{$op} == 2);
+      $data += $src[0];
+      $dest .= &$op($data & 0x7f7f) || '';
     }
-    splice(@src, 0, $size);
+    shift @src;
   }
   return $dest;
 }
